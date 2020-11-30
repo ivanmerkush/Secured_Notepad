@@ -18,10 +18,12 @@ import java.security.NoSuchProviderException;
 import java.util.Base64;
 
 public class SocketService {
-    private BufferedInputStream bufferedInputStream;
-    private BufferedOutputStream bufferedOutputStream;
+    private Socket clientSocket;
+
+    private BufferedReader in;
+    private BufferedWriter out;
+
     private PrintWriter printWriter;
-    private ByteArrayOutputStream buffer;
 
     private final SecurityService securityService;
     private String currentFile;
@@ -36,13 +38,21 @@ public class SocketService {
 
     public void startConnection() {
         try {
-            Socket clientSocket = new Socket("localhost", 1099);
+            clientSocket = new Socket("localhost", 1099);
+            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             printWriter = new PrintWriter(clientSocket.getOutputStream());
-            bufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
-            bufferedOutputStream = new BufferedOutputStream(clientSocket.getOutputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void stopConnection() throws IOException {
+
+        in.close();
+        out.close();
+        printWriter.close();
+        clientSocket.close();
     }
 
     public String getCurrentFile() {
@@ -65,47 +75,37 @@ public class SocketService {
 
     public void editFile(String currentFile, String changedText) {
         try {
-            printWriter.println("edit\n".concat(currentFile));
-            byte[] bytes = securityService.encodeText(changedText.getBytes());
+            byte[] bytes = changedText.getBytes();
+            if(securityService.isKeyGenerated()) {
+                bytes = securityService.encodeText(bytes);
+            }
+            String str = "edit\n".concat(currentFile).concat("\n").concat(Base64.getEncoder().encodeToString(bytes));
+            printWriter.println(str);
             printWriter.flush();
-            bufferedOutputStream.write(bytes);
-            bufferedOutputStream.flush();
-        } catch (BadPaddingException | IllegalBlockSizeException | IOException e) {
+            currentText = changedText.getBytes();
+            saveFile();
+        } catch (BadPaddingException | IllegalBlockSizeException e) {
             e.printStackTrace();
         }
     }
 
     public void deleteFile() {
-
+        File filePath = new File("Client\\src\\main\\resources\\".concat(currentFile).concat(".txt"));
+        filePath.delete();
+        printWriter.println("delete\n".concat(currentFile));
+        printWriter.flush();
     }
 
     public void createFile(String fileName, String text) {
-
+        this.currentFile = fileName;
         editFile(fileName, text);
     }
-
-//    public String decipher() {
-//        String fileName = callDialog("Decode file");
-//        byte[] bytes;
-//        try {
-//            bytes = Files.readAllBytes(Paths.get("Client\\src\\main\\resources\\".concat(fileName).concat(".txt")));
-//            return new String(securityService.decodeText(bytes));
-//        } catch (IOException | BadPaddingException | IllegalBlockSizeException e) {
-//            e.printStackTrace();
-//        }
-//        return "Some error happened";
-//    }
 
     public void getSessionKey() {
         try {
             printWriter.println("session");
             printWriter.flush();
-            while (bufferedInputStream.available() <= 0) {
-
-            }
-            int length = bufferedInputStream.available();
-            byte[] bytes = new byte[length];
-            bufferedInputStream.read(bytes);
+            byte[] bytes = Base64.getDecoder().decode(in.readLine());
             securityService.setSecretKey(bytes);
         } catch (IOException | BadPaddingException | IllegalBlockSizeException | NoSuchPaddingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchProviderException | InvalidAlgorithmParameterException e) {
             e.printStackTrace();
@@ -117,7 +117,6 @@ public class SocketService {
             securityService.generateRSA();
             byte[] bytes = securityService.getPublicKey().getEncoded();
             String strKey = Base64.getEncoder().encodeToString(bytes);
-            System.out.println(strKey);
             printWriter.println("key\n".concat(strKey));
             printWriter.flush();
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
@@ -128,20 +127,12 @@ public class SocketService {
     public String getText(String name) {
 
         try {
-            buffer = new ByteArrayOutputStream();
             printWriter.println("file\n".concat(name));
             printWriter.flush();
-            while (bufferedInputStream.available() <= 0) {
-
+            byte[] decodedtext = Base64.getDecoder().decode(in.readLine());
+            if(securityService.isKeyGenerated()) {
+               decodedtext = securityService.decodeText(decodedtext);
             }
-            byte[] data = new byte[1024];
-            while (bufferedInputStream.available() > 0) {
-                int read = bufferedInputStream.read(data);
-                buffer.write(data, 0, read);
-                System.out.println(read);
-            }
-            byte[] decodedtext = securityService.decodeText(buffer.toByteArray());
-            buffer.close();
             currentFile = name;
             currentText = decodedtext;
             return new String(decodedtext);

@@ -7,13 +7,13 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
-
+import java.io.IOException;
 
 
 public class Client extends Application {
 
     private TextArea textArea;
-    private SocketService socketService;
+    private final SocketService socketService;
     public Client() {
         socketService = new SocketService();
     }
@@ -44,7 +44,6 @@ public class Client extends Application {
 
         MenuItem getKeyRSA = new MenuItem("Generate RSA Key");
         MenuItem getSessionKey = new MenuItem("Get Session Key");
-//        MenuItem decipher = new MenuItem("Decipher");
         menuBar.getMenus().add(keyMenu);
         keyMenu.getItems().addAll(getKeyRSA, getSessionKey);
 
@@ -52,6 +51,7 @@ public class Client extends Application {
         textArea = new TextArea();
         textArea.setEditable(false);
         textArea.setMinWidth(500);
+        textArea.setWrapText(true);
         root.setTop(menuBar);
         root.setCenter(textArea);
 
@@ -92,21 +92,29 @@ public class Client extends Application {
 
         deleteFile.setOnAction(event -> {
             socketService.deleteFile();
+            textArea.clear();
         });
 
         getKeyRSA.setOnAction(event -> {
             socketService.generateKeyRSA();
             getKeyRSA.setDisable(true);
+            new Alert(Alert.AlertType.INFORMATION, "RSA key generated successfully").showAndWait();
         });
 
         getSessionKey.setOnAction(event -> {
             socketService.getSessionKey();
             getSessionKey.setDisable(true);
+            new Alert(Alert.AlertType.INFORMATION, "Session key received from server").showAndWait();
         });
 
-//        decipher.setOnAction(event -> {
-//            textArea.setText(socketService.decipher());
-//        });
+        primaryStage.setOnCloseRequest(event -> {
+            try {
+                socketService.stopConnection();
+                System.out.println("Client closing");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
 
     }
     private String callDialog(String messageRequest) {

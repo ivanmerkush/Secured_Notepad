@@ -6,7 +6,6 @@ import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
-import java.util.Base64;
 
 public class SecurityService {
     private PublicKey publicKey;
@@ -33,7 +32,6 @@ public class SecurityService {
         decryptionCipher.init(Cipher.DECRYPT_MODE, sessionKey, ivspec);
         encryptionCipher = Cipher.getInstance("IDEA/CFB/NoPadding", "BC");
         encryptionCipher.init(Cipher.ENCRYPT_MODE, sessionKey, ivspec);
-        System.out.println(Base64.getEncoder().encodeToString(sessionKey.getEncoded()));
     }
 
     public boolean isKeyGenerated() {
