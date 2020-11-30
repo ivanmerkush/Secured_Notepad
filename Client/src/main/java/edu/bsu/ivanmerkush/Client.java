@@ -79,20 +79,23 @@ public class Client extends Application {
         });
 
         finishEdit.setOnAction(event -> {
-            socketService.editFile(socketService.getCurrentFile(), textArea.getText());
+            socketService.editFile(textArea.getText());
             textArea.setEditable(false);
             finishEdit.setDisable(true);
+            new Alert(Alert.AlertType.INFORMATION, "File has been edited").showAndWait();
         });
 
         finishCreate.setOnAction(event -> {
             socketService.createFile(callDialog("Create file"), textArea.getText());
             textArea.setEditable(false);
             finishCreate.setDisable(true);
+            new Alert(Alert.AlertType.INFORMATION, "File has been created").showAndWait();
         });
 
         deleteFile.setOnAction(event -> {
             socketService.deleteFile();
             textArea.clear();
+            new Alert(Alert.AlertType.INFORMATION, "File has been deleted").showAndWait();
         });
 
         getKeyRSA.setOnAction(event -> {

@@ -28,7 +28,7 @@ public class SecurityService {
         return sessionKey != null;
     }
 
-    public byte[] generateSessionKey() {
+    public String generateSessionKey() {
         SecureRandom secureRandom = new SecureRandom();
         byte[] keyBytes = new byte[16];
         secureRandom.nextBytes(keyBytes);
@@ -40,7 +40,7 @@ public class SecurityService {
             decryptionCipher.init(Cipher.DECRYPT_MODE, sessionKey, ivspec);
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE,publicKey);
-            return cipher.doFinal(sessionKey.getEncoded());
+            return Base64.getEncoder().encodeToString(cipher.doFinal(sessionKey.getEncoded()));
         } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException | NoSuchProviderException e) {
             e.printStackTrace();
         }
@@ -75,4 +75,15 @@ public class SecurityService {
         }
         return null;
     }
+
+    public String decodeText(String text) {
+        try {
+            return Base64.getEncoder().encodeToString(decryptionCipher.doFinal(Base64.getDecoder().decode(text)));
+        } catch (IllegalBlockSizeException | BadPaddingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
 }

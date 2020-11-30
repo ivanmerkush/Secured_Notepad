@@ -1,16 +1,12 @@
 package edu.bsu.ivanmerkush.socket;
 
 import edu.bsu.ivanmerkush.security.SecurityService;
-import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -55,13 +51,6 @@ public class SocketService {
         clientSocket.close();
     }
 
-    public String getCurrentFile() {
-        return currentFile;
-    }
-
-    public byte[] getCurrentText() {
-        return currentText;
-    }
 
     public void saveFile() {
         try {
@@ -73,25 +62,23 @@ public class SocketService {
         }
     }
 
-    public void editFile(String currentFile, String changedText) {
-        try {
-            byte[] bytes = changedText.getBytes();
-            if(securityService.isKeyGenerated()) {
-                bytes = securityService.encodeText(bytes);
-            }
-            String str = "edit\n".concat(currentFile).concat("\n").concat(Base64.getEncoder().encodeToString(bytes));
-            printWriter.println(str);
-            printWriter.flush();
-            currentText = changedText.getBytes();
-            saveFile();
-        } catch (BadPaddingException | IllegalBlockSizeException e) {
-            e.printStackTrace();
-        }
+    public void editFile(String changedText) {
+        byte[] bytes = securityService.encodeText(changedText.getBytes());
+        String str = "edit\n".concat(currentFile).concat("\n").concat(Base64.getEncoder().encodeToString(bytes));
+        printWriter.println(str);
+        printWriter.flush();
+        currentText = changedText.getBytes();
+        saveFile();
+    }
+
+    private void editFile(String currentFile, String changedText) {
+        this.currentFile = currentFile;
+        editFile(changedText);
     }
 
     public void deleteFile() {
         File filePath = new File("Client\\src\\main\\resources\\".concat(currentFile).concat(".txt"));
-        filePath.delete();
+        boolean result = filePath.delete();
         printWriter.println("delete\n".concat(currentFile));
         printWriter.flush();
     }
@@ -107,40 +94,31 @@ public class SocketService {
             printWriter.flush();
             byte[] bytes = Base64.getDecoder().decode(in.readLine());
             securityService.setSecretKey(bytes);
-        } catch (IOException | BadPaddingException | IllegalBlockSizeException | NoSuchPaddingException | NoSuchAlgorithmException | InvalidKeyException | NoSuchProviderException | InvalidAlgorithmParameterException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void generateKeyRSA() {
-        try {
-            securityService.generateRSA();
-            byte[] bytes = securityService.getPublicKey().getEncoded();
-            String strKey = Base64.getEncoder().encodeToString(bytes);
-            printWriter.println("key\n".concat(strKey));
-            printWriter.flush();
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
-            e.printStackTrace();
-        }
+        securityService.generateRSA();
+        byte[] bytes = securityService.getPublicKey().getEncoded();
+        String strKey = Base64.getEncoder().encodeToString(bytes);
+        printWriter.println("key\n".concat(strKey));
+        printWriter.flush();
     }
 
     public String getText(String name) {
-
         try {
             printWriter.println("file\n".concat(name));
             printWriter.flush();
-            byte[] decodedtext = Base64.getDecoder().decode(in.readLine());
-            if(securityService.isKeyGenerated()) {
-               decodedtext = securityService.decodeText(decodedtext);
-            }
+            byte[] decodedtext = securityService.decodeText(in.readLine());
             currentFile = name;
             currentText = decodedtext;
             return new String(decodedtext);
-
-        } catch (IOException | BadPaddingException | IllegalBlockSizeException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        return "Some error happened";
+        return null;
     }
 
 

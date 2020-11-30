@@ -60,13 +60,11 @@ public class SingleServerSocket extends Thread{
                         securityService.setPublicKey(strKey);
                         break;
                     case "session":
-                        byte[] encodedKey = securityService.generateSessionKey();
-                        out.write(Base64.getEncoder().encodeToString(encodedKey).concat("\n"));
+                        out.write(securityService.generateSessionKey().concat("\n"));
                         out.flush();
                         break;
                     case "edit":
                         String fileName = in.readLine();
-
                         byte[] decodedText = Base64.getDecoder().decode(in.readLine());
                         if(securityService.isKeyGenerated()) {
                             decodedText = securityService.decodeText(decodedText);
